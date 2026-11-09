@@ -128,10 +128,16 @@ vi.mock("../plugins/provider-external-auth-core.js", async () =>
   (await import("../plugins/provider-external-auth.test-support.js")).createExternalAuthMock(),
 );
 
+// mock-isolation: OAuth fixtures use stored credentials without loading installed provider runtimes.
+vi.mock("../plugins/provider-runtime.runtime.js", () => ({
+  formatProviderAuthProfileApiKeyWithPlugin: async () => undefined,
+  resolveProviderOAuthCredentialWithPlugin: async () => ({ status: "unhandled" as const }),
+  resolveProviderOAuthRefreshCapabilityWithPlugin: async () => ({ status: "unhandled" as const }),
+}));
+
+// mock-isolation: Profile precedence fixtures control provider policy without loading installed plugins.
 vi.mock("../plugins/provider-runtime.js", () => ({
   buildProviderMissingAuthMessageWithPlugin: () => undefined,
-  formatProviderAuthProfileApiKeyWithPlugin: async () => undefined,
-  refreshProviderOAuthCredentialWithPlugin: async () => null,
   resolveProviderDeprecatedAuthProfileIds: ({ provider }: { provider: string }) =>
     provider === "anthropic" || provider === "claude-cli" ? ["anthropic:claude-cli"] : [],
   prepareProviderExternalAuthWithPlugin: async () => undefined,
