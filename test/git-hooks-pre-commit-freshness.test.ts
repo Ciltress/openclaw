@@ -9,6 +9,7 @@ import {
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import packageJson from "../package.json" with { type: "json" };
+import { pnpmLockfileDocuments } from "../scripts/lib/pnpm-lockfile-documents.mjs";
 import {
   commitArgs,
   createContentGuardFixture,
@@ -21,6 +22,7 @@ import { cleanupTempDirs } from "./helpers/temp-dir.js";
 import { installLineCapToolingFixture } from "./scripts/tooling-dependencies.test-support.mts";
 
 const tempDirs: string[] = [];
+const { environment } = pnpmLockfileDocuments(readFileSync("pnpm-lock.yaml", "utf8"));
 afterEach(() => cleanupTempDirs(tempDirs));
 let dir: string;
 const write = (name: string, text: string) => writeFileSync(path.join(dir, name), text);
@@ -31,6 +33,9 @@ const writeScripts = (scripts: Record<string, string>) =>
 // checker is a fixture that echoes working-tree bytes like markdownlint's MD051 context.
 beforeEach(() => {
   dir = createContentGuardFixture(tempDirs);
+  // pnpm resolves its own pin even for `run`; reuse its locked metadata without registry access.
+  write("pnpm-workspace.yaml", "offline: true\nfrozenLockfile: true\n");
+  write("pnpm-lock.yaml", `---\n${environment}\n---\nlockfileVersion: '9.0'\nimporters: {}\n`);
   const script = path.join(dir, "scripts/pre-commit/check-staged-freshness.mts");
   rmSync(script);
   symlinkSync(path.join(process.cwd(), "scripts/pre-commit/check-staged-freshness.mts"), script);
